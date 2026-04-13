@@ -5,18 +5,12 @@ import org.gradle.api.Project;
 import org.objectweb.asm.*;
 
 import static org.objectweb.asm.Opcodes.*;
-public class FlavourProcessor implements ClassProcessor {
+public class PlatImplProcessor implements ClassProcessor {
 
-    private static final String FLAVOUR_ANNOTATION_DESC = ClassUtils.toDescriptor("net.mehvahdjukaar.candlelight.api.Flavour");
-
-    private final Project project;
-
-    public FlavourProcessor(Project project) {
-        this.project = project;
-    }
+    private static final String FLAVOUR_ANNOTATION_DESC = ClassUtils.toDescriptor("net.mehvahdjukaar.candlelight.api.PlatformImpl");
 
     @Override
-    public byte[] transform(byte[] classBytes) {
+    public byte[] transform(byte[] classBytes, Project project) {
 
         ClassReader cr = new ClassReader(classBytes);
         ClassWriter cw = new ClassWriter(cr, ClassWriter.COMPUTE_MAXS);

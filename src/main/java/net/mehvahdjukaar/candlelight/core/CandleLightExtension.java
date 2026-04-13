@@ -4,5 +4,4 @@ import org.gradle.api.file.RegularFileProperty;
 
 public interface CandleLightExtension {
 
-    RegularFileProperty getAccessWideners();
 }

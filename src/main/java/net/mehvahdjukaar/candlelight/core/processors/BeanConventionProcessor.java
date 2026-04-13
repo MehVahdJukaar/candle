@@ -19,14 +19,12 @@ public class BeanConventionProcessor implements ClassProcessor {
     private static final String BEAN_ALIAS_DESC =
             ClassUtils.toDescriptor("net.mehvahdjukaar.candlelight.api.BeanAlias");
 
-    private final Project project;
-
-    public BeanConventionProcessor(Project project) {
+    public BeanConventionProcessor() {
         this.project = project;
     }
 
     @Override
-    public byte[] transform(byte[] classBytes) {
+    public byte[] transform(byte[] classBytes, Project project) {
         ClassReader cr = new ClassReader(classBytes);
         ClassWriter cw = new ClassWriter(cr, ClassWriter.COMPUTE_MAXS);
         final boolean[] modified = {false};
