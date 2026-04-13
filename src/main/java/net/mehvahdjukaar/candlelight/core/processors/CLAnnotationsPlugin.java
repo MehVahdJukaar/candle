@@ -7,6 +7,8 @@ import org.gradle.api.GradleException;
 import org.gradle.api.Project;
 import org.gradle.api.tasks.compile.JavaCompile;
 import org.jetbrains.annotations.ApiStatus;
+import org.objectweb.asm.ClassReader;
+import org.objectweb.asm.ClassWriter;
 
 import java.io.File;
 import java.io.IOException;
@@ -62,24 +64,19 @@ public class CLAnnotationsPlugin {
                 throw new RuntimeException("Failed reading class: " + file, e);
             }
 
-            byte[] modified = original;
+
+            ClassReader cr = new ClassReader(original);
+            ClassWriter cw = new ClassWriter(cr, ClassWriter.COMPUTE_MAXS);
 
             boolean changed = false;
-
             for (ClassProcessor processor : PROCESSORS) {
-
-                byte[] result = processor.transform(modified, project, ext);
-
-                if (result != modified) {
-                    changed = true;
-                    modified = result;
-                }
+                boolean success = processor.transform(cw, cr, project, ext) ;
+                changed = changed || success;
             }
-
             if (!changed) return;
 
             try {
-                writeAtomic(file.toPath(), modified);
+                writeAtomic(file.toPath(), cw.toByteArray());
 
                 CandleLightPlugin.log(project," Patched class: " + file.getName()
                 );

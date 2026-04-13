@@ -12,13 +12,11 @@ public class PlatImplProcessor implements ClassProcessor {
     private static final String FLAVOUR_ANNOTATION_DESC = ClassUtils.toDescriptor("net.mehvahdjukaar.candlelight.api.PlatformImpl");
 
     @Override
-    public byte[] transform(byte[] classBytes, Project project, CandleLightExtension ext) {
+    public boolean transform(ClassWriter writer, ClassReader reader, Project project, CandleLightExtension ext) {
 
-        ClassReader cr = new ClassReader(classBytes);
-        ClassWriter cw = new ClassWriter(cr, ClassWriter.COMPUTE_MAXS);
         final boolean[] modified = {false};
 
-        cr.accept(new ClassVisitor(ASM9, cw) {
+        reader.accept(new ClassVisitor(ASM9, writer) {
             private String className;
 
             @Override
@@ -72,7 +70,7 @@ public class PlatImplProcessor implements ClassProcessor {
             }
         }, ClassReader.SKIP_DEBUG | ClassReader.SKIP_FRAMES);
 
-        return modified[0] ? cw.toByteArray() : classBytes;
+        return modified[0];
     }
 
     private static String computeImplInternalName(String originalInternalName, String platFolder) {

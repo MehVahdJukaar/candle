@@ -25,9 +25,7 @@ public class BeanConventionProcessor implements ClassProcessor {
             ClassUtils.toDescriptor("net.mehvahdjukaar.candlelight.api.BeanAlias");
 
     @Override
-    public byte[] transform(byte[] classBytes, Project project, CandleLightExtension ext) {
-        ClassReader cr = new ClassReader(classBytes);
-        ClassWriter cw = new ClassWriter(cr, ClassWriter.COMPUTE_MAXS);
+    public boolean transform(ClassWriter cw, ClassReader cr, Project project, CandleLightExtension ext) {
         final boolean[] modified = {false};
 
         cr.accept(new ClassVisitor(ASM9, cw) {
@@ -181,7 +179,7 @@ public class BeanConventionProcessor implements ClassProcessor {
 
         }, 0);
 
-        return modified[0] ? cw.toByteArray() : classBytes;
+        return modified[0];
     }
 
     private record MethodData(String name, String descriptor, int access, String aliasPrefix) {

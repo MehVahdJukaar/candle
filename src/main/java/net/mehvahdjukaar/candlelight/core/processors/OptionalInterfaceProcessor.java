@@ -6,19 +6,16 @@ import net.mehvahdjukaar.candlelight.core.ClassUtils;
 import org.gradle.api.Project;
 import org.objectweb.asm.*;
 
-import java.util.Arrays;
-
 public class OptionalInterfaceProcessor implements ClassProcessor {
 
     private static final String ANNOTATION_DESC =
             ClassUtils.toDescriptor("net.mehvahdjukaar.candlelight.api.OptionalInterface");
 
     @Override
-    public byte[] transform(byte[] input, Project project, CandleLightExtension ext) {
-        ClassReader reader = new ClassReader(input);
+    public boolean transform(ClassWriter writer, ClassReader reader, Project project, CandleLightExtension ext) {
 
         // We use a 1-element array so the anonymous inner class can modify it
-        final String[] foundInterface = { null };
+        final String[] foundInterface = {null};
 
         // Pass 1: Scan for the @OptionalInterface annotation
         reader.accept(new ClassVisitor(Opcodes.ASM9) {
@@ -41,7 +38,6 @@ public class OptionalInterfaceProcessor implements ClassProcessor {
 
         // Pass 2: If found, actually inject the interface
         if (foundInterface[0] != null) {
-            ClassWriter writer = new ClassWriter(0);
             String targetInterface = foundInterface[0];
 
             reader.accept(new ClassVisitor(Opcodes.ASM9, writer) {
@@ -70,32 +66,10 @@ public class OptionalInterfaceProcessor implements ClassProcessor {
                     }
                 }
             }, 0);
-            return writer.toByteArray();
+            return true;
         }
 
-        return input;
+        return false;
     }
-    private byte[] addInterface(byte[] input, String newItf, Project project) {
-        ClassReader reader = new ClassReader(input);
-        ClassWriter writer = new ClassWriter(0); // No need for MAXS if just changing header
 
-        reader.accept(new ClassVisitor(Opcodes.ASM9, writer) {
-            @Override
-            public void visit(int version, int access, String name, String signature, String superName, String[] interfaces) {
-                if (!Arrays.asList(interfaces).contains(newItf)) {
-                    String[] newInterfaces = new String[interfaces.length + 1];
-                    System.arraycopy(interfaces, 0, newInterfaces, 0, interfaces.length);
-                    newInterfaces[interfaces.length] = newItf;
-
-                    CandleLightPlugin.log(project, " Added OptionalInterface [" +
-                            newItf.replace('/', '.') + "] to class: " + name.replace('/', '.'));
-
-                    super.visit(version, access, name, signature, superName, newInterfaces);
-                } else {
-                    super.visit(version, access, name, signature, superName, interfaces);
-                }
-            }
-        }, 0);
-        return writer.toByteArray();
-    }
 }
