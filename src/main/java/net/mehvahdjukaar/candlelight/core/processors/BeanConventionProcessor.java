@@ -25,6 +25,11 @@ public class BeanConventionProcessor implements ClassProcessor {
             ClassUtils.toDescriptor("net.mehvahdjukaar.candlelight.api.BeanAlias");
 
     @Override
+    public List<String> usedAnnotations() {
+        return List.of(ANNOTATION_DESC, NO_ALIAS_DESC, BEAN_ALIAS_DESC);
+    }
+
+    @Override
     public boolean transform(ClassWriter cw, ClassReader cr, Project project, CandleLightExtension ext) {
         final boolean[] modified = {false};
 

@@ -6,10 +6,18 @@ import net.mehvahdjukaar.candlelight.core.ClassUtils;
 import org.gradle.api.Project;
 import org.objectweb.asm.*;
 
+import java.util.List;
+
 import static org.objectweb.asm.Opcodes.*;
+
 public class PlatImplProcessor implements ClassProcessor {
 
     private static final String FLAVOUR_ANNOTATION_DESC = ClassUtils.toDescriptor("net.mehvahdjukaar.candlelight.api.PlatformImpl");
+
+    @Override
+    public List<String> usedAnnotations() {
+        return List.of(FLAVOUR_ANNOTATION_DESC);
+    }
 
     @Override
     public boolean transform(ClassWriter writer, ClassReader reader, Project project, CandleLightExtension ext) {
@@ -36,7 +44,7 @@ public class PlatImplProcessor implements ClassProcessor {
                     public AnnotationVisitor visitAnnotation(String annotationDesc, boolean visible) {
                         if (FLAVOUR_ANNOTATION_DESC.equals(annotationDesc)) {
                             isFlavour = true;
-                            CandleLightPlugin.log(project," Found @PlatformImpl method: " +
+                            CandleLightPlugin.log(project, " Found @PlatformImpl method: " +
                                     className.replace('/', '.') + "#" + name + desc);
                         }
                         return super.visitAnnotation(annotationDesc, visible);
@@ -50,7 +58,7 @@ public class PlatImplProcessor implements ClassProcessor {
                             String platPackage = ext.getPlatformPackage().get();
                             String implInternalName = computeImplInternalName(className,
                                     platPackage);
-                            CandleLightPlugin.log(project,"  Rewriting method to delegate to: " +
+                            CandleLightPlugin.log(project, "  Rewriting method to delegate to: " +
                                     implInternalName.replace('/', '.') + "#" + name + desc);
 
                             Type[] args = Type.getArgumentTypes(desc);
@@ -81,8 +89,8 @@ public class PlatImplProcessor implements ClassProcessor {
         String simple = lastSlash >= 0 ? originalInternalName.substring(lastSlash + 1) : originalInternalName;
 
         return pkg.isEmpty()
-                ? platFolder+"/" + simple + "Impl"
-                : pkg + "/"+platFolder+"/" + simple + "Impl";
+                ? platFolder + "/" + simple + "Impl"
+                : pkg + "/" + platFolder + "/" + simple + "Impl";
     }
 }
 

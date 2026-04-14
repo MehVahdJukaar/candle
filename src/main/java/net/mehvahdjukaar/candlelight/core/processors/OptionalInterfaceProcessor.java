@@ -6,10 +6,18 @@ import net.mehvahdjukaar.candlelight.core.ClassUtils;
 import org.gradle.api.Project;
 import org.objectweb.asm.*;
 
+import java.util.List;
+
 public class OptionalInterfaceProcessor implements ClassProcessor {
 
     private static final String ANNOTATION_DESC =
             ClassUtils.toDescriptor("net.mehvahdjukaar.candlelight.api.OptionalInterface");
+
+
+    @Override
+    public List<String> usedAnnotations() {
+        return List.of(ANNOTATION_DESC);
+    }
 
     @Override
     public boolean transform(ClassWriter writer, ClassReader reader, Project project, CandleLightExtension ext) {

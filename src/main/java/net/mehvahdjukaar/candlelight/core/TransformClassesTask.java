@@ -6,24 +6,28 @@ import org.gradle.api.file.DirectoryProperty;
 import org.gradle.api.provider.Property;
 import org.gradle.api.tasks.*;
 import org.jetbrains.annotations.Nullable;
-import org.objectweb.asm.ClassReader;
-import org.objectweb.asm.ClassVisitor;
-import org.objectweb.asm.ClassWriter;
+import org.objectweb.asm.*;
 
 import java.io.File;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.util.List;
-import java.util.concurrent.atomic.AtomicBoolean;
 
 @CacheableTask
 public abstract class TransformClassesTask extends DefaultTask {
 
     private static final List<ClassProcessor> PROCESSORS = List.of(
+            new ClientOnlyProcessor(),
             new BeanConventionProcessor(),
             new OptionalInterfaceProcessor(),
             new PlatImplProcessor()
     );
+
+    private static final List<String> OUR_ANNOTATIONS = PROCESSORS.stream()
+            .flatMap(p -> p.usedAnnotations().stream())
+            .distinct()
+            .toList();
+
 
     @InputDirectory
     @PathSensitive(PathSensitivity.RELATIVE)
@@ -68,6 +72,17 @@ public abstract class TransformClassesTask extends DefaultTask {
 
     private byte @Nullable [] transform(byte[] input) {
 
+        // PASS 1: Lightweight Pre-Scan
+        ClassReader scanReader = new ClassReader(input);
+        PreScannerVisitor scanner = new PreScannerVisitor();
+
+        // SKIP_CODE and SKIP_DEBUG make the scan even faster
+        // because we only care about annotations
+        scanReader.accept(scanner, ClassReader.SKIP_CODE | ClassReader.SKIP_DEBUG);
+
+        if (!scanner.shouldTransform) {
+            return null; // Exit early! No expensive ClassWriter work.
+        }
 
         boolean changed = false;
         for (ClassProcessor processor : PROCESSORS) {
@@ -84,5 +99,32 @@ public abstract class TransformClassesTask extends DefaultTask {
         if (!changed) return null;
 
         return input;
+    }
+
+    private static class PreScannerVisitor extends ClassVisitor {
+        private boolean shouldTransform = false;
+        private static final String CLIENT_ONLY = "Lnet/mehvahdjukaar/candlelight/api/ClientOnly;";
+        // Add other trigger annotations or patterns here
+
+        public PreScannerVisitor() {
+            super(Opcodes.ASM9);
+        }
+
+        @Override
+        public AnnotationVisitor visitAnnotation(String desc, boolean visible) {
+            if (OUR_ANNOTATIONS.contains(desc)) shouldTransform = true;
+            return null;
+        }
+
+        @Override
+        public MethodVisitor visitMethod(int access, String name, String desc, String sig, String[] exc) {
+            return new MethodVisitor(Opcodes.ASM9) {
+                @Override
+                public AnnotationVisitor visitAnnotation(String desc, boolean visible) {
+                    if (OUR_ANNOTATIONS.contains(desc)) shouldTransform = true;
+                    return null;
+                }
+            };
+        }
     }
 }
