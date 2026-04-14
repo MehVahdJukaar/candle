@@ -1,5 +1,6 @@
 package net.mehvahdjukaar.candlelight.core;
 
+import net.mehvahdjukaar.candlelight.core.jars_processors.ClientOnlyTransformPlugin;
 import org.gradle.api.Plugin;
 import org.gradle.api.Project;
 import org.gradle.api.plugins.JavaPluginExtension;
@@ -20,6 +21,9 @@ public class CandleLightPlugin implements Plugin<Project> {
 
         extension.getPlatformPackage().convention("platform");
         extension.getLogging().convention(true);
+        extension.getClientOnly().convention(false);
+
+        ClientOnlyTransformPlugin.apply(project, extension);
 
         project.getPlugins().withId("java", plugin -> {
             JavaCompile compileTask = (JavaCompile) project.getTasks().getByName("compileJava");

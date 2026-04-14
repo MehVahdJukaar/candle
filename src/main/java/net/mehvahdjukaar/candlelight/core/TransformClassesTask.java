@@ -17,7 +17,6 @@ import java.util.List;
 public abstract class TransformClassesTask extends DefaultTask {
 
     private static final List<ClassProcessor> PROCESSORS = List.of(
-            new ClientOnlyProcessor(),
             new BeanConventionProcessor(),
             new OptionalInterfaceProcessor(),
             new PlatImplProcessor()
@@ -103,8 +102,6 @@ public abstract class TransformClassesTask extends DefaultTask {
 
     private static class PreScannerVisitor extends ClassVisitor {
         private boolean shouldTransform = false;
-        private static final String CLIENT_ONLY = "Lnet/mehvahdjukaar/candlelight/api/ClientOnly;";
-        // Add other trigger annotations or patterns here
 
         public PreScannerVisitor() {
             super(Opcodes.ASM9);
