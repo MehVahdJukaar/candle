@@ -47,7 +47,7 @@ public class PlatImplProcessor implements ClassProcessor {
                         if (isFlavour) {
                             modified[0] = true;
 
-                            String implInternalName = computeImplInternalName(className, ext.platformPackage());
+                            String implInternalName = computeImplInternalName(className, ext.getPlatformPackage().toString());
                             CandleLightPlugin.log(project,"  Rewriting method to delegate to: " +
                                     implInternalName.replace('/', '.') + "#" + name + desc);
 

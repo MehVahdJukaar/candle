@@ -10,7 +10,7 @@ public class CandleLightPlugin implements Plugin<Project> {
     private static final String LOG_NAME = "[CandleLight]";
 
     public static void log(Project project, String str) {
-        if (extension != null && !extension.logging()) {
+        if (extension != null && !extension.getLogging().get()) {
             return;
         }
         project.getLogger().lifecycle(LOG_NAME + str);

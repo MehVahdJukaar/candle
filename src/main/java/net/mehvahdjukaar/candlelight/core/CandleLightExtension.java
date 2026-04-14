@@ -2,12 +2,17 @@ package net.mehvahdjukaar.candlelight.core;
 
 import org.gradle.api.file.RegularFileProperty;
 
-public interface CandleLightExtension {
-    default String platformPackage(){
-        return "platform";
+import org.gradle.api.provider.Property;
+
+public abstract class CandleLightExtension {
+
+    // Constructor to set default values (conventions)
+    public CandleLightExtension() {
+        getPlatformPackage().convention("platform");
+        getLogging().convention(true);
     }
 
-    default boolean logging(){
-        return true;
-    }
+    public abstract Property<String> getPlatformPackage();
+
+    public abstract Property<Boolean> getLogging();
 }
