@@ -4,63 +4,45 @@ import org.gradle.api.Plugin;
 import org.gradle.api.Project;
 import org.gradle.api.plugins.JavaPluginExtension;
 import org.gradle.api.tasks.compile.JavaCompile;
+import org.gradle.jvm.tasks.Jar;
 
 public class CandleLightPlugin implements Plugin<Project> {
 
-    private static final String CANDLE_LIGHT_PLUGIN_NAME = "[CANDLELIGHT]";
+    private static final String PREFIX = "[CANDLELIGHT] ";
 
     public static void log(Project project, String s) {
-        project.getLogger().lifecycle(CANDLE_LIGHT_PLUGIN_NAME + s);
+        project.getLogger().lifecycle(PREFIX + s);
     }
-
     @Override
     public void apply(Project project) {
+        CandleLightExtension extension = project.getExtensions()
+                .create("candlelight", CandleLightExtension.class);
 
-        // Extension (non-static, per-project)
-        CandleLightExtension extension =
-                project.getExtensions().create("candlelight", CandleLightExtension.class);
+        extension.getPlatformPackage().convention("platform");
+        extension.getLogging().convention(true);
 
         project.getPlugins().withId("java", plugin -> {
+            JavaCompile compileTask = (JavaCompile) project.getTasks().getByName("compileJava");
+            var mainSourceSet = project.getExtensions().getByType(JavaPluginExtension.class)
+                    .getSourceSets().getByName("main");
 
-            project.getTasks().withType(JavaCompile.class).all(compileTask -> {
-                if (!compileTask.getName().equals("compileJava")) return;
-
-                String taskName = "transform" + capitalize(compileTask.getName());
-
-                var transformTask = project.getTasks().register(taskName, TransformClassesTask.class,
-                        task -> {
-
-                            task.getSourceDir().set(compileTask.getDestinationDirectory());
-
-                            task.getOutputDir().set(
-                                    project.getLayout().getBuildDirectory()
-                                            .dir("candlelight/" + compileTask.getName())
-                            );
-
-                            task.getExtensionProperty().set(extension);
-
-
-                            // Ensure correct execution order
-                            task.dependsOn(compileTask);
-                        });
-
-                // Replace compiled classes with transformed ones
-                project.getExtensions()
-                        .getByType(JavaPluginExtension.class)
-                        .getSourceSets()
-                        .named("main", sourceSet -> {
-
-                            project.getTasks().withType(org.gradle.api.tasks.bundling.Jar.class).configureEach(jar -> {
-
-                                jar.from(transformTask.flatMap(TransformClassesTask::getOutputDir));
-
-                            });
-                        });
+            // Define the transformation task
+            var transformTask = project.getTasks().register("candleLightTransform", TransformClassesTask.class, t -> {
+                t.getSourceDir().set(compileTask.getDestinationDirectory());
+                t.getOutputDir().set(project.getLayout().getBuildDirectory().dir("transformed/classes"));
+                t.getExtensionProperty().set(extension);
             });
-        });
-    }
 
-    private static String capitalize(String s) {
-        return s.substring(0, 1).toUpperCase() + s.substring(1);
+            // Redirect the JAR task
+            project.getTasks().named("jar", Jar.class, jar -> {
+                // This removes the default classes directory from the Jar's root
+                jar.exclude(element -> element.getFile().getAbsolutePath()
+                        .contains(compileTask.getDestinationDirectory().get().getAsFile().getAbsolutePath()));
+
+                // This adds your transformed classes
+                jar.from(transformTask);
+            });
+
+        });
     }
 }

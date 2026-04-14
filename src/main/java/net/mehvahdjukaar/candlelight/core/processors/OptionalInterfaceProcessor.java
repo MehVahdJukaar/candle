@@ -32,7 +32,7 @@ public class OptionalInterfaceProcessor implements ClassProcessor {
                         }
                     };
                 }
-                return null;
+                return super.visitAnnotation(descriptor, visible);
             }
         }, ClassReader.SKIP_CODE | ClassReader.SKIP_DEBUG | ClassReader.SKIP_FRAMES);
 

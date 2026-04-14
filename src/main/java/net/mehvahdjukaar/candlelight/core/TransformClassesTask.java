@@ -43,7 +43,7 @@ public abstract class TransformClassesTask extends DefaultTask {
 
         getProject().delete(outputDir);
         outputDir.mkdirs();
-
+        CandleLightPlugin.log(getProject(), " processing annotations");
         ClassUtils.walkClasses(inputDir, file -> {
             try {
                 String relative = inputDir.toPath().relativize(file.toPath()).toString();
@@ -55,10 +55,9 @@ public abstract class TransformClassesTask extends DefaultTask {
                 byte[] outputBytes = transform(inputBytes);
 
                 if (outputBytes != null) {
-
-                    Files.write(outFile.toPath(), outputBytes);
                     CandleLightPlugin.log(getProject(), " processed: " + relative);
-                }
+                }else outputBytes = inputBytes;
+                Files.write(outFile.toPath(), outputBytes);
 
 
             } catch (IOException e) {
@@ -69,16 +68,21 @@ public abstract class TransformClassesTask extends DefaultTask {
 
     private byte @Nullable [] transform(byte[] input) {
 
-        ClassReader cr = new ClassReader(input);
-        ClassWriter cw = new ClassWriter(cr, ClassWriter.COMPUTE_MAXS);
 
         boolean changed = false;
         for (ClassProcessor processor : PROCESSORS) {
+            ClassReader cr = new ClassReader(input);
+            ClassWriter cw = new ClassWriter(cr, ClassWriter.COMPUTE_MAXS);
+
             boolean success = processor.transform(cw, cr, getProject(), getExtensionProperty().get()) ;
-            changed = changed || success;
+
+            if (success) {
+                input = cw.toByteArray();
+                changed = true;
+            }
         }
         if (!changed) return null;
 
-        return cw.toByteArray();
+        return input;
     }
 }
