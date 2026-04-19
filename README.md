@@ -2,6 +2,8 @@
 
 A Gradle plugin which adds ASM operations useful in cross-platform Minecraft mods projects
 
+Best used together with [Candlelight IDEA plugin](https://github.com/MehVahdJukaar/architectury-idea-plugin)
+
 **Installation**
 
 ```groovy
