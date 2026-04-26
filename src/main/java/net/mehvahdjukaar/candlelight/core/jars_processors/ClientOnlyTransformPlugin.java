@@ -15,16 +15,21 @@ public class ClientOnlyTransformPlugin {
     private static final String CLIENT_ONLY = "Lnet/mehvahdjukaar/candlelight/api/ClientOnly;";
 
     private enum LoaderType {
-        FABRIC("net.fabricmc.api.EnvType", "net.fabricmc.api.Environment"),
-        FORGE("net.minecraftforge.api.distmarker.Dist", "net.minecraftforge.api.distmarker.OnlyIn"),
-        NEOFORGE("net.neoforged.api.distmarker.Dist", "net.neoforged.api.distmarker.OnlyIn");
+        FABRIC("net.fabricmc.api.EnvType", "net.fabricmc.api.Environment",
+                "Lnet/fabricmc/api/EnvType;", "CLIENT"),
+        FORGE("net.minecraftforge.api.distmarker.Dist", "net.minecraftforge.api.distmarker.OnlyIn",
+                "Lnet/minecraftforge/api/distmarker/Dist;", "CLIENT"),
+        NEOFORGE("net.neoforged.api.distmarker.Dist", "net.neoforged.api.distmarker.OnlyIn",
+                "Lnet/neoforged/api/distmarker/Dist;", "CLIENT");
 
-        final String valueDesc;
         final String annotationDesc;
+        final String enumValueDesc;
+        final String enumConstantName;
 
-        LoaderType(String valueClass, String annotationClass) {
-            this.valueDesc = "L" + valueClass.replace('.', '/') + ";";
+        LoaderType(String enumClass, String annotationClass, String enumValueDesc, String enumConstantName) {
             this.annotationDesc = "L" + annotationClass.replace('.', '/') + ";";
+            this.enumValueDesc = enumValueDesc;
+            this.enumConstantName = enumConstantName;
         }
 
         static LoaderType infer(String projectName) {
@@ -66,41 +71,81 @@ public class ClientOnlyTransformPlugin {
                         ClassReader reader = new ClassReader(original);
                         ClassWriter writer = new ClassWriter(reader, 0);
 
-                        // Flag to track if we found any ClientOnly annotations in this specific class
                         AtomicBoolean modified = new AtomicBoolean(false);
 
                         ClassVisitor visitor = new ClassVisitor(Opcodes.ASM9, writer) {
-                            private String className;
-
-                            @Override
-                            public void visit(int version, int access, String name, String signature, String superName, String[] interfaces) {
-                                className = name;
-                                super.visit(version, access, name, signature, superName, interfaces);
-                            }
-
                             @Override
                             public AnnotationVisitor visitAnnotation(String desc, boolean visible) {
-                                return transformAnnotation(desc, visible, modified, loader);
+                                if (CLIENT_ONLY.equals(desc)) {
+                                    modified.set(true);
+                                    // Create the loader-specific annotation
+                                    AnnotationVisitor newAv = super.visitAnnotation(loader.annotationDesc, visible);
+                                    return new AnnotationVisitor(Opcodes.ASM9, newAv) {
+                                        @Override
+                                        public void visitEnd() {
+                                            // Add the required enum value
+                                            newAv.visitEnum("value", loader.enumValueDesc, loader.enumConstantName);
+                                            super.visitEnd();
+                                        }
+                                        // Ignore any original annotation attributes (there are none)
+                                        @Override public void visit(String name, Object value) {}
+                                        @Override public void visitEnum(String name, String desc, String value) {}
+                                        @Override public AnnotationVisitor visitAnnotation(String name, String desc) { return null; }
+                                        @Override public AnnotationVisitor visitArray(String name) { return null; }
+                                    };
+                                }
+                                // Preserve all other annotations
+                                return super.visitAnnotation(desc, visible);
                             }
 
                             @Override
-                            public FieldVisitor visitField(int access, String name, String descriptor, String signature, Object value) {
-                                FieldVisitor fv = super.visitField(access, name, descriptor, signature, value);
+                            public FieldVisitor visitField(int access, String name, String desc, String signature, Object value) {
+                                FieldVisitor fv = super.visitField(access, name, desc, signature, value);
                                 return new FieldVisitor(Opcodes.ASM9, fv) {
                                     @Override
                                     public AnnotationVisitor visitAnnotation(String desc, boolean visible) {
-                                        return transformAnnotation(desc, visible, modified, loader);
+                                        if (CLIENT_ONLY.equals(desc)) {
+                                            modified.set(true);
+                                            AnnotationVisitor newAv = super.visitAnnotation(loader.annotationDesc, visible);
+                                            return new AnnotationVisitor(Opcodes.ASM9, newAv) {
+                                                @Override
+                                                public void visitEnd() {
+                                                    newAv.visitEnum("value", loader.enumValueDesc, loader.enumConstantName);
+                                                    super.visitEnd();
+                                                }
+                                                @Override public void visit(String name, Object value) {}
+                                                @Override public void visitEnum(String name, String desc, String value) {}
+                                                @Override public AnnotationVisitor visitAnnotation(String name, String desc) { return null; }
+                                                @Override public AnnotationVisitor visitArray(String name) { return null; }
+                                            };
+                                        }
+                                        return super.visitAnnotation(desc, visible);
                                     }
                                 };
                             }
 
                             @Override
-                            public MethodVisitor visitMethod(int access, String name, String descriptor, String signature, String[] exceptions) {
-                                MethodVisitor mv = super.visitMethod(access, name, descriptor, signature, exceptions);
+                            public MethodVisitor visitMethod(int access, String name, String desc, String signature, String[] exceptions) {
+                                MethodVisitor mv = super.visitMethod(access, name, desc, signature, exceptions);
                                 return new MethodVisitor(Opcodes.ASM9, mv) {
                                     @Override
                                     public AnnotationVisitor visitAnnotation(String desc, boolean visible) {
-                                        return transformAnnotation(desc, visible, modified, loader);
+                                        if (CLIENT_ONLY.equals(desc)) {
+                                            modified.set(true);
+                                            AnnotationVisitor newAv = super.visitAnnotation(loader.annotationDesc, visible);
+                                            return new AnnotationVisitor(Opcodes.ASM9, newAv) {
+                                                @Override
+                                                public void visitEnd() {
+                                                    newAv.visitEnum("value", loader.enumValueDesc, loader.enumConstantName);
+                                                    super.visitEnd();
+                                                }
+                                                @Override public void visit(String name, Object value) {}
+                                                @Override public void visitEnum(String name, String desc, String value) {}
+                                                @Override public AnnotationVisitor visitAnnotation(String name, String desc) { return null; }
+                                                @Override public AnnotationVisitor visitArray(String name) { return null; }
+                                            };
+                                        }
+                                        return super.visitAnnotation(desc, visible);
                                     }
                                 };
                             }
@@ -115,30 +160,11 @@ public class ClientOnlyTransformPlugin {
                                     "[ClientOnly] Modified " + project.relativePath(classFile) + " (" + loader.name() + ")"
                             );
                         }
-
                     } catch (Exception e) {
                         throw new RuntimeException("Failed class: " + classFile, e);
                     }
                 });
     }
-
-    private static AnnotationVisitor transformAnnotation(String desc, boolean visible, AtomicBoolean modified, LoaderType loader) {
-        if (!CLIENT_ONLY.equals(desc)) {
-            return null; // Let the visitor handle the original annotation
-        }
-
-        modified.set(true);
-
-        // We handle the creation of the new loader-specific annotation here
-        // Since we are inside a visitor that's already piping to a writer,
-        // we return the visitor for the NEW annotation type.
-        // NOTE: In the previous context, 'super' was the visitor.
-        // To keep logic clean, we return the delegated visitor from the parent.
-        return null;
-    }
-
-    // Since the original code used a very specific nested visitor structure for the transform:
-    // I've simplified the helper call, but the visitor logic remains:
 
     private static void writeAtomic(Path file, byte[] data) throws Exception {
         Path tmp = Files.createTempFile(file.getParent(), "cl_", ".class");
