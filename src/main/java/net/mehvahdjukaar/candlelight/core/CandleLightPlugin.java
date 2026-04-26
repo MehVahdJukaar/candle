@@ -23,9 +23,8 @@ public class CandleLightPlugin implements Plugin<Project> {
         CandleLightExtension clExtension = project.getExtensions()
                 .create("candlelight", CandleLightExtension.class);
 
-        clExtension.getPlatformPackage().convention("platform");
         clExtension.getLogging().convention(true);
-        clExtension.getClientOnly().convention(false);
+        clExtension.getClientOnly().convention(true);
 
 
         ClientOnlyTransformPlugin.apply(project, clExtension);

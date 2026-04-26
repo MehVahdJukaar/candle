@@ -163,7 +163,7 @@ public class PlatImplProcessor implements ClassProcessor {
     }
 
     private static String computeImplInternalName(String originalInternalName, CandleLightExtension ext) {
-        String platPackage = ext.getPlatformPackage().get();
+        String platPackage = "platform";
         int lastSlash = originalInternalName.lastIndexOf('/');
         String pkg = lastSlash >= 0 ? originalInternalName.substring(0, lastSlash) : "";
         String simple = lastSlash >= 0 ? originalInternalName.substring(lastSlash + 1) : originalInternalName;
